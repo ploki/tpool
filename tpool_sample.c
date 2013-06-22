@@ -118,6 +118,9 @@ main(void)
                 free(shared);
         }
 
+        if (pool)
+          ttask_pool_free(pool);
+
         return ret;
 
 }
