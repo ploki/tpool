@@ -64,7 +64,7 @@ main(void)
                 goto end;
         }
 
-        shared = calloc(sizeof *shared, 1);
+        shared = calloc(1, sizeof *shared);
         if (! shared) {
                 perror("calloc");
                 goto end;
@@ -79,7 +79,7 @@ main(void)
         shared_locked = 1;
 
         for (i = 0; i < N_ELEMS(vals); i++) {
-                tfoo_task *task = calloc(sizeof *task, 1);
+                tfoo_task *task = calloc(1, sizeof *task);
                 assert(NULL != task);
 
                 task->shared = shared;
