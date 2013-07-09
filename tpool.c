@@ -46,33 +46,33 @@ ttask_pool_delete_func(ttask_pool *pool,
 static ttask *
 ttask_pool_get_func(ttask_pool *pool)
 {
-  ttask *task;
+        ttask *task;
 
-  if (! pool->task_queue)
-    return NULL;
+        if (! pool->task_queue)
+                return NULL;
 
-  task = pool->task_queue;
-  pool->task_queue = task->next;
-  if (! pool->task_queue)
-    pool->task_last = NULL;
+        task = pool->task_queue;
+        pool->task_queue = task->next;
+        if (! pool->task_queue)
+                pool->task_last = NULL;
 
-  return task;
+        return task;
 }
 
 static int
 ttask_pool_put_func(ttask_pool *pool,
                     ttask *task)
 {
-  task->next = NULL;
+        task->next = NULL;
 
-  if (! pool->task_queue) {
-          pool->task_queue = pool->task_last = task;
-  } else {
-          pool->task_last->next = task;
-          pool->task_last = task;
-  }
+        if (! pool->task_queue) {
+                pool->task_queue = pool->task_last = task;
+        } else {
+                pool->task_last->next = task;
+                pool->task_last = task;
+        }
 
-  return 0;
+        return 0;
 }
 
 ttask *
