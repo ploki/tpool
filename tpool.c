@@ -20,6 +20,7 @@ struct stask_pool
         pthread_cond_t idle_cond;
         pthread_mutex_t task_lock;
 
+        pthread_t **tids;
         int n_workers;                      /* total workers: idling+working */
         int n_workers_needed;
         int n_workers_running;
@@ -96,6 +97,7 @@ ttask_pool_get(ttask_pool *pool)
 
                 if (pool->stopped || pool->n_workers > pool->n_workers_needed) {
                         pool->n_workers--;
+                        free(pool->tids[pool->n_workers]);
                         pthread_cond_broadcast(&pool->task_cond);
                         pthread_mutex_unlock(&pool->task_lock);
                         pthread_exit(NULL);
@@ -170,6 +172,9 @@ ttask_pool_stop(ttask_pool *pool)
 
         while (pool->n_workers)
                 pthread_cond_wait(&pool->task_cond, &pool->task_lock);
+
+        for (int i = 0; i < pool->n_workers; i++)
+                pthread_join(*pool->tids[i], NULL);
 
         pthread_mutex_unlock(&pool->task_lock);
 }
@@ -279,6 +284,11 @@ void
 ttask_pool_free(ttask_pool *pool)
 {
         ttask_pool_dtor(pool);
+
+        for (int i = 0; i < pool->n_workers; i++)
+                free(pool->tids[i]);
+
+        free(pool->tids);
         free(pool);
 }
 
@@ -316,10 +326,29 @@ ttask_pool_set_workers(ttask_pool *pool,
         if (n_workers_needed < pool->n_workers) {
                 pthread_cond_broadcast(&pool->task_cond);
         } else {
+                size_t n_tids = (size_t) n_workers_needed;
+                pthread_t **tmptids = NULL;
+
+                tmptids = realloc(pool->tids, n_tids * sizeof *tmptids);
+                if (! tmptids) {
+                        pthread_mutex_unlock(&pool->task_lock);
+                        return -1;
+                }
+
+                pool->tids = tmptids;
+
                 for (i = pool->n_workers; i < n_workers_needed; i++) {
-                        pthread_t tid;
-                        ret = pthread_create(&tid, &pool->attr, worker_main, pool);
-                        if (0 ==  ret)
+                        pool->tids[i] = malloc(sizeof *pool->tids[i]);
+                        if (! pool->tids[i]) {
+                                pthread_mutex_unlock(&pool->task_lock);
+                                return -1;
+                        }
+
+                        ret = pthread_create(pool->tids[i],
+                                             &pool->attr,
+                                             worker_main,
+                                             pool);
+                        if (0 == ret)
                                 pool->n_workers++;
                         else
                                 break;
